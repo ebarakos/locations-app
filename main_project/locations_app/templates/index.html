@@ -1,111 +1,125 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
-    <meta charset="utf-8">
-    <title>Fusion Tables layers</title>
-    <style>
-      html, body {
-        height: 100%;
-        margin: 0;
-        padding: 0;
-      }
-      #map {
-        height: 50%;
-      }
-    </style>
-  </head>
-  <body>
-    <div id="map"></div>
-    <div id="location"> Locations </div>
-    <script>
-    function initMap() {
-        var map = new google.maps.Map(document.getElementById('map'), {
-          center: {lat: 41.850033, lng: -87.6500523},
-          zoom: 11
-        });
-
-        var layer = new google.maps.FusionTablesLayer({
-          query: {
-            select: 'lat',
-            from: '1oGMujUCtTgLLx6LjzAvCfGPSd1CtFegQvfY3-dmP'
-          }
-        });
-        layer.setMap(map);
-        google.maps.event.addListener(map, 'click', function( event ){
-        alert(event.latLng.lng());
-        create_post();
-        function create_post() {
-          console.log("create post is working!") // sanity check
-          $.ajax({
-              url : "create_post", // the endpoint
-              type : "POST", // http method
-              data : { lat : event.latLng.lat(), lng : event.latLng.lng() }, // data sent with the post request
-
-              // handle a successful response
-              success : function(json) {
-                  $('#post-text').val(''); // remove the value from the input
-                  console.log(json); // log the returned json to the console
-                  console.log("success"); // another sanity check
-              },
-
-              // handle a non-successful response
-              error : function(xhr,errmsg,err) {
-                  $('#results').html("<div class='alert-box alert radius' data-alert>Oops! We have encountered an error: "+errmsg+
-                      " <a href='#' class='close'>&times;</a></div>"); // add the error to the dom
-                  console.log(xhr.status + ": " + xhr.responseText); // provide a bit more info about the error to the console
+<head>
+<meta name="viewport" >
+<meta charset="utf-8">
+<title>Fusion Tables layers</title>
+<style>
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+#map {
+  height: 50%;
+}
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div id="location"> Locations </div>
+<script>
+function getCookie(name) {
+      var cookieValue = null;
+      if (document.cookie && document.cookie != '') {
+          var cookies = document.cookie.split(';');
+          for (var i = 0; i < cookies.length; i++) {
+              var cookie = jQuery.trim(cookies[i]);
+              // Does this cookie string begin with the name we want?
+              if (cookie.substring(0, name.length + 1) == (name + '=')) {
+                  cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                  break;
               }
-          });
+          }
+      }
+      return cookieValue;
+}
 
-          function getCookie(name) {
-            var cookieValue = null;
-            if (document.cookie && document.cookie != '') {
-                var cookies = document.cookie.split(';');
-                for (var i = 0; i < cookies.length; i++) {
-                    var cookie = jQuery.trim(cookies[i]);
-                    // Does this cookie string begin with the name we want?
-                    if (cookie.substring(0, name.length + 1) == (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
-                }
-            }
-            return cookieValue;
-        }
+function csrfSafeMethod(method) {
+      // these HTTP methods do not require CSRF protection
+      return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+}
 
-        function csrfSafeMethod(method) {
-            // these HTTP methods do not require CSRF protection
-            return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
-        }
-        $.ajaxSetup({
-            beforeSend: function(xhr, settings) {
-                if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
-                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
-                }
-            }
-        });
-        var csrftoken = getCookie('csrftoken');
-      };  
-            
+function create_post(callbackFunction,result) {
+      console.log("create post is working!") // sanity check
+      $.ajaxSetup({
+          beforeSend: function(xhr, settings) {
+              var csrftoken = getCookie('csrftoken');
 
+              if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                  xhr.setRequestHeader("X-CSRFToken", csrftoken);
+              }
+          }
+      });
+      $.ajax({
+          url : "create_post", // the endpoint
+          type : "POST", // http method
+          data : { lat : result.geometry.location.lat(), lng : result.geometry.location.lng(), address : result.formatted_address }, // data sent with the post request
 
+          // handle a successful response
+          success : function(json) {
+              $('#post-text').val(''); // remove the value from the input
+              console.log(json); // log the returned json to the console
+              console.log("success"); // another sanity check
+              callbackFunction();
+          },
 
+          // handle a non-successful response
+          error : function(xhr,errmsg,err) {
+              $('#results').html("<div class='alert-box alert radius' data-alert>Oops! We have encountered an error: "+errmsg+
+                  " <a href='#' class='close'>&times;</a></div>"); // add the error to the dom
+              console.log(xhr.status + ": " + xhr.responseText); // provide a bit more info about the error to the console
+          }
+    });
 
-      })
-  }
-  
- 
+};  
+function createLayer(map){
+  var layer = new google.maps.FusionTablesLayer({
+    query: {
+      select: 'lat',
+      from: '1oGMujUCtTgLLx6LjzAvCfGPSd1CtFegQvfY3-dmP',
+    },
+    map:map
+  });
+};
+function geocodeLatLng(geocoder,map,event) {
+  var latlng = {lat: parseFloat(event.latLng.lat().toFixed(3)), lng: parseFloat(event.latLng.lng().toFixed(3))};
+  geocoder.geocode({'location': latlng}, function(results, status) {
+    if (status === google.maps.GeocoderStatus.OK) {
+      if (results[1]) {
+      result=results[1];
+      create_post(createLayer,result);  
+      } else {
+        window.alert('No results found');
+      }
+    } else {
+      window.alert('Geocoder failed due to: ' + status);
+    }
+  });
+}  
+function initMap() {
+ var map = new google.maps.Map(document.getElementById('map'), {
+    center: {lat: 41.850033, lng: -87.6500523},
+    zoom: 10,
+    mapTypeId: google.maps.MapTypeId.ROADMAP
+  });
+  createLayer(map);
+  // layer.setMap(map);
+  google.maps.event.addListener(map, 'click', function( event ){
+    var geocoder = new google.maps.Geocoder;
+    // console.log(event.latLng)
+    geocodeLatLng(geocoder, map,event);
+  })
+}
 
+</script>
+<script async defer
+src="https://maps.googleapis.com/maps/api/js?callback=initMap">
 
+</script>
+<script async defer src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.0/jquery.min.js">
+</script>
 
-    </script>
-    <script async defer
-    src="https://maps.googleapis.com/maps/api/js?callback=initMap">
-
-    </script>
-    <script async defer src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.0/jquery.min.js">
-    </script>
-
-  </body>
+</body>
 </html>
 
