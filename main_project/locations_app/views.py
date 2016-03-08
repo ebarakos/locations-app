@@ -11,6 +11,8 @@ from django.core import serializers
 
 
 def index(request):
+	if request.POST.get('button'):
+		deleteAll()
 	data = serializers.serialize( "python", Location.objects.all() )
 	return render(request, "index.html", {'data' : data} )
 
@@ -21,7 +23,7 @@ def create_post(request):
 		address = request.POST.get('address')
 		loc = Location(address=address,lat=lat,lng=lng)
 		loc.save()
-		insertRow(loc)
+		insertUniqueRow(loc)
 		return HttpResponse(
 	    json.dumps({ "ok": "ok"}),
 	    content_type="application/json"
@@ -32,16 +34,30 @@ def create_post(request):
 	    content_type="application/json"
 	)
 
-def insertRow(loc):
+def insertUniqueRow(loc):
   table_id = "1oGMujUCtTgLLx6LjzAvCfGPSd1CtFegQvfY3-dmP"
-  print(loc.address)
-
-  query = "INSERT INTO {}(Address,Lat,Lng) VALUES('{}',{},{})".format(table_id,loc.address,loc.lat,loc.lng) # Single quotes
-  print(loc.lat)
-  print(loc.lng)
+  # print(loc.address)
+  checkForDuplicates = "SELECT * FROM {} WHERE Address='{}' AND Lat={} AND Lng={}".format(table_id,loc.address,loc.lat,loc.lng)
+  # print (checkForDuplicates)
+  addRow = "INSERT INTO {}(Address,Lat,Lng) VALUES('{}',{},{})".format(table_id,loc.address,loc.lat,loc.lng) # Single quotes
   scopes = ['https://www.googleapis.com/auth/fusiontables']
   HOME = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
   credentials = ServiceAccountCredentials.from_json_keyfile_name(os.path.join(HOME, 'test.json'), scopes=scopes)
   http_auth = credentials.authorize(Http())
   service = build("fusiontables", "v1", http=http_auth)
-  service.query().sql(sql=query).execute()
+  if not 'rows' in service.query().sql(sql=checkForDuplicates).execute():
+  	service.query().sql(sql=addRow).execute()
+
+def deleteAll():
+  table_id = "1oGMujUCtTgLLx6LjzAvCfGPSd1CtFegQvfY3-dmP"
+  deleteAllRows="DELETE FROM {}".format(table_id)
+
+  scopes = ['https://www.googleapis.com/auth/fusiontables']
+  HOME = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+  credentials = ServiceAccountCredentials.from_json_keyfile_name(os.path.join(HOME, 'test.json'), scopes=scopes)
+  http_auth = credentials.authorize(Http())
+  service = build("fusiontables", "v1", http=http_auth)
+  service.query().sql(sql=deleteAllRows).execute()
+  Location.objects.all().delete()
+
+
