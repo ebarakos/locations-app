@@ -7,10 +7,12 @@ import os
 import requests
 import json
 from apiclient.discovery import build
+from django.core import serializers
 
 
 def index(request):
- 	return render(request, "index.html")
+	data = serializers.serialize( "python", Location.objects.all() )
+	return render(request, "index.html", {'data' : data} )
 
 def create_post(request):
 	if request.method == 'POST':

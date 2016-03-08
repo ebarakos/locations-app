@@ -3,7 +3,7 @@
 <head>
 <meta name="viewport" >
 <meta charset="utf-8">
-<title>Fusion Tables layers</title>
+<title>Locations App</title>
 <style>
 html, body {
   height: 100%;
@@ -17,7 +17,12 @@ html, body {
 </head>
 <body>
 <div id="map"></div>
-<div id="location"> Locations </div>
+<div id="location"> {% for instance in data %}
+    {% for field, value in instance.fields.items %}
+        {{ field }}: {{ value }}
+    {% endfor %}
+{% endfor %}</div>
+
 <script>
 function getCookie(name) {
       var cookieValue = null;
