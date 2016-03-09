@@ -5,32 +5,23 @@
   <meta charset="utf-8">
   <title>Locations App</title>
   <style>
-  html, body {
-    height: 100%;
-    margin: 0;
-    padding: 0;
-  }
-  #map {
-    height: 50%;
-  }
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    #map {
+      height: 50%;
+    }
   </style>
   </head>
   <body>
   <div id="map"></div>
-  <div id="clear"></div>
-  <form action="#" method="post">
-    {%csrf_token%}
-    <input type="submit" name="button" value="Clear all" >
-  </form>
-
+  <div id="delete">
+     <button id="clear">Clear Data</button>
+  </div>
   <div id="location"> 
-    <ul>
-      {% for instance in data %}
-          <li>{% for field, value in instance.fields.items %}
-                 {{ field }}: {{ value }}
-              {% endfor %}</li>
-      {% endfor %}
-    </ul>
+     {% include "locations-list.html" %}    
   </div>
 
   <script>
@@ -55,39 +46,59 @@
         return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
   }
 
-  function create_post(callbackFunction,result) {
-        console.log("create post is working!") // sanity check
+  function saveLocation(callbackFunction,result) {
         $.ajaxSetup({
             beforeSend: function(xhr, settings) {
                 var csrftoken = getCookie('csrftoken');
-
                 if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
                     xhr.setRequestHeader("X-CSRFToken", csrftoken);
                 }
             }
         });
         $.ajax({
-            url : "create_post", // the endpoint
-            type : "POST", // http method
-            data : { lat : result.geometry.location.lat(), lng : result.geometry.location.lng(), address : result.formatted_address }, // data sent with the post request
+            url : "saveLocation",
+            type : "POST", 
+            data : { lat : result.geometry.location.lat(), lng : result.geometry.location.lng(), address : result.formatted_address },
 
-            // handle a successful response
-            success : function(json) {
-                $('#post-text').val(''); // remove the value from the input
-                console.log(json); // log the returned json to the console
-                console.log("success"); // another sanity check
+            success : function(data) {
+                console.log("success");
                 callbackFunction();
+
+                $('#location').html(data)
+
+
             },
 
-            // handle a non-successful response
             error : function(xhr,errmsg,err) {
-                $('#results').html("<div class='alert-box alert radius' data-alert>Oops! We have encountered an error: "+errmsg+
-                    " <a href='#' class='close'>&times;</a></div>"); // add the error to the dom
-                console.log(xhr.status + ": " + xhr.responseText); // provide a bit more info about the error to the console
+                console.log(errmsg); 
             }
       });
 
-  };  
+  };
+  function clear() {
+        $.ajaxSetup({
+            beforeSend: function(xhr, settings) {
+                var csrftoken = getCookie('csrftoken');
+                if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                }
+            }
+        });
+        $.ajax({
+            url : "delete",
+            type : "POST", 
+
+            success : function(json) {
+                console.log("cleared data");
+                $('#location').html('<ul>{% for instance in data %} <li>{% for field, value in instance.fields.items %}{{ field }}: {{ value }}{% endfor %}</li>{% endfor %}</ul>');
+            },
+
+            error : function(xhr,errmsg,err) {
+                console.log(errmsg); 
+            }
+      });
+
+  };    
   function createLayer(map){
     var layer = new google.maps.FusionTablesLayer({
       query: {
@@ -103,7 +114,7 @@
       if (status === google.maps.GeocoderStatus.OK) {
         if (results[1]) {
         result=results[1];
-        create_post(createLayer,result);  
+        saveLocation(createLayer,result);  
         } else {
           window.alert('No results found');
         }
@@ -119,12 +130,13 @@
       mapTypeId: google.maps.MapTypeId.ROADMAP
     });
     createLayer(map);
-    // layer.setMap(map);
+          var geocoder = new google.maps.Geocoder;
     google.maps.event.addListener(map, 'click', function( event ){
-      var geocoder = new google.maps.Geocoder;
-      // console.log(event.latLng)
       geocodeLatLng(geocoder, map,event);
     })
+    document.getElementById("clear").addEventListener("click", function(){
+        clear();
+    });
   }
 
   </script>

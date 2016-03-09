@@ -1,0 +1,7 @@
+ <ul>
+  {% for instance in data %}
+      <li>{% for field, value in instance.fields.items %}
+             {{ field }}: {{ value }}
+          {% endfor %}</li>
+  {% endfor %}
+</ul>
