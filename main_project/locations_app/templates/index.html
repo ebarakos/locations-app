@@ -1,6 +1,6 @@
-  <!DOCTYPE html>
-  <html>
-  <head>
+<!DOCTYPE html>
+<html>
+<head>
   <meta name="viewport" >
   <meta charset="utf-8">
   <title>Locations App</title>
@@ -14,139 +14,137 @@
       height: 50%;
     }
   </style>
-  </head>
-  <body>
+</head>
+<body>
   <div id="map"></div>
   <div id="delete">
-     <button id="clear">Clear Data</button>
+    <button id="clear">Clear Data</button>
   </div>
   <div id="location"> 
-     {% include "locations-list.html" %}    
+    {% include "locations-list.html" %}    
   </div>
 
   <script>
-  function getCookie(name) {
-        var cookieValue = null;
-        if (document.cookie && document.cookie != '') {
-            var cookies = document.cookie.split(';');
-            for (var i = 0; i < cookies.length; i++) {
-                var cookie = jQuery.trim(cookies[i]);
-                // Does this cookie string begin with the name we want?
-                if (cookie.substring(0, name.length + 1) == (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
-  }
+    function getCookie(name) {
+      var cookieValue = null;
+      if (document.cookie && document.cookie != '') {
+        var cookies = document.cookie.split(';');
+        for (var i = 0; i < cookies.length; i++) {
+          var cookie = jQuery.trim(cookies[i]);
+// Does this cookie string begin with the name we want?
+if (cookie.substring(0, name.length + 1) == (name + '=')) {
+  cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+  break;
+}
+}
+}
+return cookieValue;
+}
 
-  function csrfSafeMethod(method) {
-        // these HTTP methods do not require CSRF protection
-        return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
-  }
+function csrfSafeMethod(method) {
+// these HTTP methods do not require CSRF protection
+return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+}
 
-  function saveLocation(callbackFunction,result) {
-        $.ajaxSetup({
-            beforeSend: function(xhr, settings) {
-                var csrftoken = getCookie('csrftoken');
-                if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
-                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
-                }
-            }
-        });
-        $.ajax({
-            url : "saveLocation",
-            type : "POST", 
-            data : { lat : result.geometry.location.lat(), lng : result.geometry.location.lng(), address : result.formatted_address },
+function saveLocation(callbackFunction,result) {
+  $.ajaxSetup({
+    beforeSend: function(xhr, settings) {
+      var csrftoken = getCookie('csrftoken');
+      if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+        xhr.setRequestHeader("X-CSRFToken", csrftoken);
+      }
+    }
+  });
+  $.ajax({
+    url : "saveLocation",
+    type : "POST", 
+    data : { lat : result.geometry.location.lat(), lng : result.geometry.location.lng(), address : result.formatted_address },
 
-            success : function(data) {
-                console.log("success");
-                callbackFunction();
+    success : function(data) {
+      console.log("success");
+      callbackFunction();
+      $('#location').html(data)
+    },
 
-                $('#location').html(data)
+    error : function(xhr,errmsg,err) {
+      console.log(errmsg); 
+    }
+  });
 
+};
 
-            },
+function clear() {
+  $.ajaxSetup({
+    beforeSend: function(xhr, settings) {
+      var csrftoken = getCookie('csrftoken');
+      if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+        xhr.setRequestHeader("X-CSRFToken", csrftoken);
+      }
+    }
+  });
+  $.ajax({
+    url : "delete",
+    type : "POST", 
 
-            error : function(xhr,errmsg,err) {
-                console.log(errmsg); 
-            }
-      });
+    success : function(data) {
+      console.log("cleared data");
+      $('#location').html(data)
+    },
 
-  };
-  function clear() {
-        $.ajaxSetup({
-            beforeSend: function(xhr, settings) {
-                var csrftoken = getCookie('csrftoken');
-                if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
-                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
-                }
-            }
-        });
-        $.ajax({
-            url : "delete",
-            type : "POST", 
+    error : function(xhr,errmsg,err) {
+      console.log(errmsg); 
+    }
+  });
 
-            success : function(json) {
-                console.log("cleared data");
-                $('#location').html('<ul>{% for instance in data %} <li>{% for field, value in instance.fields.items %}{{ field }}: {{ value }}{% endfor %}</li>{% endfor %}</ul>');
-            },
+};   
 
-            error : function(xhr,errmsg,err) {
-                console.log(errmsg); 
-            }
-      });
+function createLayer(map){
+  var layer = new google.maps.FusionTablesLayer({
+    query: {
+      select: 'lat',
+      from: '1oGMujUCtTgLLx6LjzAvCfGPSd1CtFegQvfY3-dmP',
+    },
+    map:map
+  });
+};
 
-  };    
-  function createLayer(map){
-    var layer = new google.maps.FusionTablesLayer({
-      query: {
-        select: 'lat',
-        from: '1oGMujUCtTgLLx6LjzAvCfGPSd1CtFegQvfY3-dmP',
-      },
-      map:map
-    });
-  };
-  function geocodeLatLng(geocoder,map,event) {
-    var latlng = {lat: parseFloat(event.latLng.lat().toFixed(6)), lng: parseFloat(event.latLng.lng().toFixed(3))};
-    geocoder.geocode({'location': latlng}, function(results, status) {
-      if (status === google.maps.GeocoderStatus.OK) {
-        if (results[1]) {
+function geocodeLatLng(geocoder,map,event) {
+  var latlng = {lat: parseFloat(event.latLng.lat().toFixed(6)), lng: parseFloat(event.latLng.lng().toFixed(3))};
+  geocoder.geocode({'location': latlng}, function(results, status) {
+    if (status === google.maps.GeocoderStatus.OK) {
+      if (results[1]) {
         result=results[1];
         saveLocation(createLayer,result);  
-        } else {
-          window.alert('No results found');
-        }
       } else {
-        window.alert('Geocoder failed due to: ' + status);
+        window.alert('No results found');
       }
-    });
-  }  
-  function initMap() {
-   var map = new google.maps.Map(document.getElementById('map'), {
-      center: {lat: 41.850033, lng: -87.6500523},
-      zoom: 10,
-      mapTypeId: google.maps.MapTypeId.ROADMAP
-    });
-    createLayer(map);
-          var geocoder = new google.maps.Geocoder;
-    google.maps.event.addListener(map, 'click', function( event ){
-      geocodeLatLng(geocoder, map,event);
-    })
-    document.getElementById("clear").addEventListener("click", function(){
-        clear();
-    });
-  }
+    } else {
+      window.alert('No matching address for these coordinates');
+    }
+  });
+}  
 
-  </script>
-  <script async defer
-  src="https://maps.googleapis.com/maps/api/js?callback=initMap">
+function initMap() {
+  var map = new google.maps.Map(document.getElementById('map'), {
+    center: {lat: 41.850033, lng: -87.6500523},
+    zoom: 10,
+    mapTypeId: google.maps.MapTypeId.ROADMAP
+  });
+  createLayer(map);
+  var geocoder = new google.maps.Geocoder;
+  google.maps.event.addListener(map, 'click', function( event ){
+    geocodeLatLng(geocoder, map,event);
+  })
+  document.getElementById("clear").addEventListener("click", function(){
+    clear();
+  });
+}
 
-  </script>
-  <script async defer src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.0/jquery.min.js">
-  </script>
-
-  </body>
-  </html>
+</script>
+<script async defer src="https://maps.googleapis.com/maps/api/js?callback=initMap">
+</script>
+<script async defer src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.0/jquery.min.js">
+</script>
+</body>
+</html>
 
